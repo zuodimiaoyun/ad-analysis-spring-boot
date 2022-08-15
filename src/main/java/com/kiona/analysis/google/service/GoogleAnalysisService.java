@@ -98,10 +98,12 @@ public class GoogleAnalysisService {
                     .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy())
                     .build();
             List<TimeSummary> daySummaries = getDaySummaries(summaries);
+            List<String> excludeFields = new ArrayList<>(dayExcludeFields);
+            excludeFields.add("costMoney");
             if (!daySummaries.isEmpty()) {
                 WriteSheet writeSheetDay = EasyExcel
                         .writerSheet("按天")
-                        .excludeColumnFiledNames(dayExcludeFields)
+                        .excludeColumnFiledNames(excludeFields)
                         .head(TimeSummary.class)
                         .build();
                 excelWriter.write(daySummaries, writeSheetDay);
@@ -111,7 +113,7 @@ public class GoogleAnalysisService {
             if (!dayCampaignSummaries.isEmpty()) {
                 WriteSheet writeSheetDayCampaign = EasyExcel
                         .writerSheet("按Campaign天")
-                        .excludeColumnFiledNames(dayExcludeFields)
+                        .excludeColumnFiledNames(excludeFields)
                         .head(DayCampaignSummary.class)
                         .build();
                 excelWriter.write(dayCampaignSummaries, writeSheetDayCampaign);
