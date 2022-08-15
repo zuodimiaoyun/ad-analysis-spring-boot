@@ -8,6 +8,8 @@ spring:
     console:
       enabled: true
       path: /data-console
+      settings:
+        web-allow-others: true
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     generate-ddl: true
