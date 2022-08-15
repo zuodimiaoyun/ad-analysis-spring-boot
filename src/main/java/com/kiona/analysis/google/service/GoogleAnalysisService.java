@@ -4,7 +4,6 @@ import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.ExcelWriter;
 import com.alibaba.excel.write.metadata.WriteSheet;
 import com.alibaba.excel.write.style.column.LongestMatchColumnWidthStyleStrategy;
-import com.kiona.analysis.google.constant.GoogleAnalysisType;
 import com.kiona.analysis.google.constant.GoogleSkanConstant;
 import com.kiona.analysis.model.DayCampaignSummary;
 import com.kiona.analysis.model.Summary;
@@ -205,10 +204,14 @@ public class GoogleAnalysisService {
     private Summary parseRow(int rowNum, List<String> rowData, Header header, String analysisType) {
         checkColumns(rowNum, rowData.size(), header);
         String day = rowData.get(header.getDayIndex());
-        int otherEventCount = Integer.parseInt(rowData.get(header.getOtherEventIndex()));
+        int otherEventCount = csvNumberToInteger(rowData.get(header.getOtherEventIndex()));
         String campaign = header.getCampaignIndex() >= 0 ? rowData.get(header.getCampaignIndex()) : null;
         int[] eventCounts = parseEventCounts(rowNum, rowData, header);
         return summary(day, campaign, otherEventCount, eventCounts, analysisType);
+    }
+
+    private int csvNumberToInteger(String csvNum){
+        return Integer.parseInt(csvNum.replace("\"", "").replace(",", ""));
     }
 
     private int[] parseEventCounts(int rowNum, List<String> rowData, Header header) {
@@ -219,7 +222,7 @@ public class GoogleAnalysisService {
             int eventNo = indexToEventNoEntry.getValue();
             int eventCount = 0;
             try {
-                eventCount = Integer.parseInt(rowData.get(eventIndex).replace("\"", "").replace(",", ""));
+                eventCount = csvNumberToInteger(rowData.get(eventIndex));
             } catch (NumberFormatException ex) {
                 log.warn("第" + rowNum + "行，第" + columnNum + "列，存在不可解析数据，跳过！！！！！");
             }
