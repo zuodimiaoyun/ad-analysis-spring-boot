@@ -18,6 +18,13 @@
     <dd>可用事件列名："数字_SKAdNetwork Conversions" 或 "数字_SKAdNetwork 转化次数"，其中数字为事件号</dd>
 </dl>
 <form action="/api/v1/google/analysis" method="post" enctype="multipart/form-data">
+    <label>
+        请选择类型：
+        <select name="analysisType">
+            <option value="ROE">roe</option>
+            <option value="IF">if</option>
+        </select>
+    </label>
     <input type="file" name="file" accept=".csv" multiple>
     <button type="submit">生成统计表格</button>
 </form>

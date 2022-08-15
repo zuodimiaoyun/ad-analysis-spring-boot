@@ -19,8 +19,8 @@ public class ControllerExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public String customHandler(Exception ex) {
-        log.error("异常", ex);
-        return "异常信息：" + ex.getMessage();
+        log.error("", ex);
+        return ex.getMessage();
     }
 
 }

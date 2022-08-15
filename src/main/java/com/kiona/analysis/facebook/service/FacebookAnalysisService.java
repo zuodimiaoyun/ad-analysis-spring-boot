@@ -11,11 +11,15 @@ import com.kiona.analysis.model.Summary;
 import com.kiona.analysis.model.TimeSummary;
 import com.kiona.analysis.util.DateFormatter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.poifs.filesystem.FileMagic;
 import org.apache.tika.Tika;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.metadata.TikaCoreProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,18 +56,28 @@ public class FacebookAnalysisService {
 
 
     public void analysis(MultipartFile file, HttpServletResponse response) throws IOException {
-        checkFileType(file.getInputStream());
+        checkFileType(file);
         export(parse(file), response);
     }
 
-    private void checkFileType(InputStream inputStream) throws IOException {
-        Tika tika = new Tika();
-        String detect = tika.detect(inputStream);
-        log.info(detect);
+    private void checkFileType(MultipartFile file) throws IOException {
+        FileMagic fileMagic = FileMagic.valueOf(new BufferedInputStream(file.getInputStream()));
+        switch(fileMagic){
+            case OLE2:
+            case OOXML:
+                break;
+            case XML:
+                throw new RuntimeException("不支持2003 XML表格，" + "请将文件另存为xls、xlsx格式后重试。");
+            default:
+                throw new RuntimeException("不支持的文件类型：" + fileMagic + "，请将文件另存为xls、xlsx格式后重试。");
+        }
     }
 
     private List<Summary> parse(MultipartFile file) throws IOException {
-        List<DayCreativeSummary> dayCreativeSummaries = EasyExcel.read(file.getInputStream()).head(DayCreativeSummary.class).doReadAllSync();
+        List<DayCreativeSummary> dayCreativeSummaries = EasyExcel
+                .read(file.getInputStream())
+                .head(DayCreativeSummary.class)
+                .doReadAllSync();
         if(!dayCreativeSummaries.isEmpty() && dayCreativeSummaries.get(0).getCreative() != null){
             return new ArrayList<>(dayCreativeSummaries);
         }else{

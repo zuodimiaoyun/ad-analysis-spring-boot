@@ -4,8 +4,8 @@ import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.ExcelWriter;
 import com.alibaba.excel.write.metadata.WriteSheet;
 import com.alibaba.excel.write.style.column.LongestMatchColumnWidthStyleStrategy;
+import com.kiona.analysis.google.constant.GoogleAnalysisType;
 import com.kiona.analysis.google.constant.GoogleSkanConstant;
-import com.kiona.analysis.google.constant.GoogleSkanPurchaseValue;
 import com.kiona.analysis.model.DayCampaignSummary;
 import com.kiona.analysis.model.Summary;
 import com.kiona.analysis.model.TimeSummary;
@@ -14,12 +14,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.metadata.TikaCoreProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
@@ -35,7 +36,10 @@ import java.util.stream.IntStream;
 @Service
 public class GoogleAnalysisService {
 
+    private final GoogleEventService googleEventService;
+
     private static final int START_ANALYSIS_ROW = 3;
+    private static final List<String> supportMediaTypes = Arrays.asList("text/csv");
 
     private static final List<String> dayExcludeFields = new ArrayList<>();
     private static final List<String> weekExcludeFields = new ArrayList<>();
@@ -49,18 +53,24 @@ public class GoogleAnalysisService {
         monthExcludeFields.add("day");
     }
 
-    public void analysis(MultipartFile file, HttpServletResponse response) throws IOException {
-        checkFileType(file.getInputStream());
-        export(parse(file), response);
+    public GoogleAnalysisService(GoogleEventService googleEventService) {this.googleEventService = googleEventService;}
+
+    public void analysis(MultipartFile file, String analysisType, HttpServletResponse response) throws IOException {
+        checkFileType(file);
+        export(parse(file, analysisType), response);
     }
 
-    private void checkFileType(InputStream inputStream) throws IOException {
-        Tika tika = new Tika();
-        String detect = tika.detect(inputStream);
-        log.info(detect);
+    private void checkFileType(MultipartFile file) throws IOException {
+        Metadata metadata = new Metadata();
+        metadata.set(TikaCoreProperties.RESOURCE_NAME_KEY, file.getOriginalFilename());
+        String detect = new Tika().detect(file.getInputStream(), metadata);
+        log.info("文件名：" + file.getOriginalFilename() + "，检测到的文件类型：" + detect);
+        if(!supportMediaTypes.contains(detect)){
+            throw new RuntimeException("不支持的类型：" + detect + "！支持的文件类型：" + supportMediaTypes);
+        }
     }
 
-    private List<Summary> parse(MultipartFile file) throws IOException {
+    private List<Summary> parse(MultipartFile file, String analysisType) throws IOException {
         List<Summary> summaries = new ArrayList<>();
         Header header = null;
         int currentRow = 0;
@@ -73,7 +83,7 @@ public class GoogleAnalysisService {
                 header = parseHeader(row);
                 continue;
             }
-            summaries.add(parseRow(currentRow, row, header));
+            summaries.add(parseRow(currentRow, row, header, analysisType));
         }
         return summaries;
     }
@@ -192,13 +202,13 @@ public class GoogleAnalysisService {
         }
     }
 
-    private Summary parseRow(int rowNum, List<String> rowData, Header header) {
+    private Summary parseRow(int rowNum, List<String> rowData, Header header, String analysisType) {
         checkColumns(rowNum, rowData.size(), header);
         String day = rowData.get(header.getDayIndex());
         int otherEventCount = Integer.parseInt(rowData.get(header.getOtherEventIndex()));
         String campaign = header.getCampaignIndex() >= 0 ? rowData.get(header.getCampaignIndex()) : null;
         int[] eventCounts = parseEventCounts(rowNum, rowData, header);
-        return summary(day, campaign, otherEventCount, eventCounts);
+        return summary(day, campaign, otherEventCount, eventCounts, analysisType);
     }
 
     private int[] parseEventCounts(int rowNum, List<String> rowData, Header header) {
@@ -218,10 +228,10 @@ public class GoogleAnalysisService {
         return eventCounts;
     }
 
-    private Summary summary(String day, String campaign, int otherEventCount, int[] eventCounts) {
+    private Summary summary(String day, String campaign, int otherEventCount, int[] eventCounts, String analysisType) {
         int install = otherEventCount + Arrays.stream(eventCounts).sum();
-        int purchase = getPurchaseCount(day, eventCounts);
-        double purchaseValue = getPurchaseValue(day, eventCounts);
+        int purchase = googleEventService.getPurchaseCount(analysisType, eventCounts);
+        double purchaseValue = googleEventService.getPurchaseValue(analysisType, eventCounts);
         Summary summary;
         if (campaign != null) {
             summary = DayCampaignSummary.builder().day(day).campaign(campaign).build();
@@ -233,20 +243,5 @@ public class GoogleAnalysisService {
         summary.setPurchaseValue(purchaseValue);
         return summary;
     }
-
-    private int getPurchaseCount(String day, int[] eventCounts) {
-        return IntStream.range(0, eventCounts.length)
-                .filter(eventNo -> GoogleSkanPurchaseValue.isPurchaseEvent(eventNo, day))
-                .map(eventNo -> eventCounts[eventNo])
-                .sum();
-    }
-
-    private static double getPurchaseValue(String day, int[] eventCounts) {
-        return IntStream.range(0, eventCounts.length)
-                .filter(eventNo -> GoogleSkanPurchaseValue.isPurchaseEvent(eventNo, day))
-                .mapToDouble(eventNo -> GoogleSkanPurchaseValue.getValue(eventNo, day) * eventCounts[eventNo])
-                .sum();
-    }
-
 
 }

@@ -4,8 +4,18 @@ spring:
     username: kiona
     password: kiona
     driverClassName: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /data-console
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
+      naming:
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
   mvc:
     view:
       suffix: ".html"
