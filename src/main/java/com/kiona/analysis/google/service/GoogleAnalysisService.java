@@ -141,7 +141,7 @@ public class GoogleAnalysisService {
     }
 
     private int findHeaderIndex(List<String> headers, String headerPattern) {
-        return IntStream.range(0, headers.size()).filter(index -> headers.get(index).matches(headerPattern)).findFirst().orElse(-1);
+        return IntStream.range(0, headers.size()).filter(index -> headers.get(index).toLowerCase().matches(headerPattern.toLowerCase())).findFirst().orElse(-1);
     }
 
     private Header parseHeader(List<String> headers) {
@@ -205,7 +205,7 @@ public class GoogleAnalysisService {
     private Summary parseRow(int rowNum, List<String> rowData, Header header, String analysisType) {
         checkColumns(rowNum, rowData.size(), header);
         String day = rowData.get(header.getDayIndex());
-        int otherEventCount = Integer.parseInt(rowData.get(header.getOtherEventIndex()));
+        int otherEventCount = Integer.parseInt(rowData.get(header.getOtherEventIndex()).replace("\"", "").replace(",", ""));
         String campaign = header.getCampaignIndex() >= 0 ? rowData.get(header.getCampaignIndex()) : null;
         int[] eventCounts = parseEventCounts(rowNum, rowData, header);
         return summary(day, campaign, otherEventCount, eventCounts, analysisType);
