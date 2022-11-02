@@ -7,5 +7,5 @@ package com.kiona.analysis.google.constant;
  */
 public class GoogleAnalysisType {
     public static final String ROE = "ROE";
-    public static final String IF = "IF";
+    public static final String LF = "LF";
 }

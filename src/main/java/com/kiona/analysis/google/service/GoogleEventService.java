@@ -22,14 +22,14 @@ public class GoogleEventService {
 
     public double getPurchaseValue(String category, int[] eventCounts){
         return IntStream.range(0, eventCounts.length)
-                .filter(this::isPurchaseEvent)
+                .filter(no -> isPurchaseEvent(category, String.valueOf(no)))
                 .mapToDouble(eventNo -> getPurchaseValueByCategoryAndNo(category, String.valueOf(eventNo)) * eventCounts[eventNo])
                 .sum();
     }
 
     public int getPurchaseCount(String category, int[] eventCounts) {
         return IntStream.range(0, eventCounts.length)
-                .filter(this::isPurchaseEvent)
+                .filter(no -> isPurchaseEvent(category, String.valueOf(no)))
                 .map(eventNo -> eventCounts[eventNo])
                 .sum();
     }
@@ -38,7 +38,7 @@ public class GoogleEventService {
         return repository.findByCategoryAndNo(category, no).map(GoogleEvent::getPurchaseValue).orElse(0d);
     }
 
-    private boolean isPurchaseEvent(int eventNo){
-        return eventNo >= 19;
+    private boolean isPurchaseEvent(String category, String no){
+        return repository.findByCategoryAndNo(category, no).map(GoogleEvent::isPurchaseEvent).orElse(false);
     }
 }
